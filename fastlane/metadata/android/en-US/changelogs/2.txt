@@ -1,0 +1,1 @@
+Adds the Gradle wrapper, so the app can be built by F-Droid. No changes to the app itself.
