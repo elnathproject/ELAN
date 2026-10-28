@@ -20,7 +20,7 @@ Repo: https://github.com/elnathproject/ELAN.git
 Builds:
   - versionName: '1.0'
     versionCode: 1
-    commit: v1.0
+    commit: 0690c1df0acdf53c328e0aab5340dbf4d007513f
     subdir: app
     gradle:
       - yes
