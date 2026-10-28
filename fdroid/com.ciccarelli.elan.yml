@@ -18,14 +18,14 @@ RepoType: git
 Repo: https://github.com/elnathproject/ELAN.git
 
 Builds:
-  - versionName: '1.0'
-    versionCode: 1
-    commit: 0690c1df0acdf53c328e0aab5340dbf4d007513f
+  - versionName: '1.0.1'
+    versionCode: 2
+    commit: 09eb44ce16af8603be3fc85decfa13fcb093473f
     subdir: app
     gradle:
       - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-CurrentVersion: '1.0'
-CurrentVersionCode: 1
+CurrentVersion: '1.0.1'
+CurrentVersionCode: 2
