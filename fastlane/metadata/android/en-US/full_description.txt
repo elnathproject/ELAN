@@ -1,0 +1,18 @@
+Élan measures time in two consecutive phases. Set a countdown; when it reaches zero, a stopwatch starts by itself.
+
+The digits are drawn as seven-segment LED figures and fill the whole screen, in portrait and in landscape.
+
+<b>Features</b>
+<ul>
+<li>Countdown followed automatically by a stopwatch</li>
+<li>Duration in minutes and seconds, or quick presets (0:10, 0:30, 1:00, 3:00, 5:00, 10:00)</li>
+<li>Double tone and vibration when the countdown ends</li>
+<li>Screen stays on while the app is open</li>
+<li>Digits at full height, minutes above seconds in portrait, one row in landscape</li>
+<li>Separate colours for the countdown and the stopwatch, remembered between sessions</li>
+<li>Works fully offline: no internet permission, no ads, no tracking</li>
+</ul>
+
+Time is computed from the system clock, not by counting ticks, so it stays accurate even if the phone slows the app down.
+
+Free software, released under the GNU General Public License, version 3.

@@ -42,7 +42,7 @@ To install it on your phone:
 2. Open the downloaded file. The first time, Android asks you to allow installs from that source (your browser or file manager): allow it.
 3. Google Play Protect may warn that the developer is unknown; choose to install anyway.
 
-To update, download and install the new APK. Your settings are kept.
+To update, download the new APK and install it over the old one. If Android refuses because the signature differs, uninstall the old version first; the colour settings are stored inside the app and are lost in that case.
 
 ## Project structure
 
@@ -50,7 +50,13 @@ To update, download and install the new APK. Your settings are kept.
 - `app/src/main/java/com/ciccarelli/countdown/MainActivity.kt`: the Android window that hosts the timer full screen, keeps the screen on, handles vibration and opens external links in the browser.
 - `app/src/main/AndroidManifest.xml`: name, icon, automatic rotation and permissions (vibration only).
 - `.github/workflows/build.yml`: the automatic build on GitHub.
+- `fastlane/metadata/android/en-US/`: the store listing (title, descriptions, icon, screenshots) used by F-Droid.
+- `LICENSE`: the full text of the GNU General Public License, version 3.
 
 ## Credits
 
-Designed and built by Alessandro Ciccarelli, [alessandrociccarelli.com](https://alessandrociccarelli.com). 2026.
+Designed and built by Alessandro Ciccarelli, [alessandrociccarelli.com](https://alessandrociccarelli.com). © 2026.
+
+## License
+
+Élan is free software, released under the [GNU General Public License, version 3](LICENSE) or, at your option, any later version. You may use, study, change and share it; versions you distribute must remain under the same terms.

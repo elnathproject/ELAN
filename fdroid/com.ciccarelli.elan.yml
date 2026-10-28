@@ -1,0 +1,31 @@
+# Draft of the F-Droid inclusion file for Élan.
+# It does not take part in this repository's build: it is copied to
+# metadata/com.ciccarelli.elan.yml in a fork of F-Droid's "fdroiddata"
+# repository, from which the merge request is made.
+
+Categories:
+  - Time
+License: GPL-3.0-or-later
+AuthorName: Alessandro Ciccarelli
+AuthorWebSite: https://alessandrociccarelli.com
+WebSite: https://github.com/elnathproject/ELAN
+SourceCode: https://github.com/elnathproject/ELAN
+IssueTracker: https://github.com/elnathproject/ELAN/issues
+
+AutoName: Élan
+
+RepoType: git
+Repo: https://github.com/elnathproject/ELAN.git
+
+Builds:
+  - versionName: '1.0'
+    versionCode: 1
+    commit: v1.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '1.0'
+CurrentVersionCode: 1
