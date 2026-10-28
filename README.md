@@ -53,4 +53,4 @@ To update, download and install the new APK. Your settings are kept.
 
 ## Credits
 
-Designed and built by Alessandro Ciccarelli, [alessandrociccarelli.com](https://alessandrociccarelli.com). © 2026.
+Designed and built by Alessandro Ciccarelli, [alessandrociccarelli.com](https://alessandrociccarelli.com). 2026.
