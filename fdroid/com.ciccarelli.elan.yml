@@ -4,11 +4,11 @@
 # repository, from which the merge request is made.
 
 Categories:
-  - Time
+  - Stopwatch
+  - Timer
 License: GPL-3.0-or-later
 AuthorName: Alessandro Ciccarelli
 AuthorWebSite: https://alessandrociccarelli.com
-WebSite: https://github.com/elnathproject/ELAN
 SourceCode: https://github.com/elnathproject/ELAN
 IssueTracker: https://github.com/elnathproject/ELAN/issues
 
@@ -25,7 +25,7 @@ Builds:
     gradle:
       - yes
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: '1.0'
 CurrentVersionCode: 1
