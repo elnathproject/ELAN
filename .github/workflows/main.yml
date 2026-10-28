@@ -3,6 +3,7 @@ name: Build APK
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -29,11 +30,17 @@ jobs:
       - name: Rename APK
         run: cp app/build/outputs/apk/debug/app-debug.apk Elan.apk
 
-      - name: Publish
+      - name: Keep the APK of every build
+        uses: actions/upload-artifact@v4
+        with:
+          name: Elan
+          path: Elan.apk
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: latest
-          name: Élan, latest build
-          body: APK to install on your phone. Rebuilt every time the project changes.
+          name: Élan ${{ github.ref_name }}
+          body: APK to install on your phone.
           files: Elan.apk
           make_latest: true

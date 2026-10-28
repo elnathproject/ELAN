@@ -34,7 +34,7 @@ Time is always computed from the system clock rather than by counting ticks, so 
 
 ## Installing
 
-Every change pushed to the `main` branch triggers an automatic build, which you can follow in the repository's **Actions** tab. A few minutes later `Elan.apk` appears on the **Releases** page, under the `latest` release.
+Every change pushed to the `main` branch triggers an automatic build, which you can follow in the repository's **Actions** tab. Each version tagged `vX.Y` also gets a release with `Elan.apk` on the **Releases** page.
 
 To install it on your phone:
 
