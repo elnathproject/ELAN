@@ -1,0 +1,561 @@
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Élan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a single dark screen. While setting up: digits + panel + controls.
+   While running: digits only, fitted to the whole screen; a tap brings back the controls. */
+:root {
+  --bg: #0d0f10;
+  --panel: #171a1c;
+  --line: #2a2f32;
+  --fg: #d9dedf;
+  --muted: #7d8789;
+  --count: #f2a541;
+  --run: #9fe3d6;
+  --count-ink: #1a1205;
+  --run-ink: #08201c;
+  --font-digits: ui-monospace, "SFMono-Regular", "Roboto Mono", Menlo, monospace;
+  --font-ui: "Roboto Condensed", "Arial Narrow", system-ui, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-ui);
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-block: 10px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.top { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.phase {
+  font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.phase span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phase { flex: 1 1 auto; }
+.phase i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+body[data-phase="count"] .phase i { background: var(--count); }
+body[data-phase="run"] .phase i { background: var(--run); }
+.tools { display: flex; gap: 8px; flex: none; }
+.iconbtn {
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  font: 600 12px var(--font-ui); letter-spacing: .08em; text-transform: uppercase;
+  padding: 7px 10px; border-radius: 6px; cursor: pointer;
+}
+.iconbtn[aria-pressed="true"] { color: var(--fg); border-color: var(--muted); }
+
+.stage {
+  flex: 1; min-height: 0; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.fit { flex: 1; min-height: 0; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.fit { position: relative; }
+#digits { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+body.paused #digits { opacity: .45; }
+.flash { animation: flash .9s ease-out; }
+@keyframes flash { 0% { background: color-mix(in srgb, var(--count) 35%, transparent); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+
+.setup { display: flex; flex-wrap: wrap; gap: 12px 22px; align-items: center; justify-content: center; }
+.spin { display: flex; gap: 22px; align-items: center; }
+.field { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.field label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--line); color: var(--fg);
+  font: 400 22px var(--font-ui); cursor: pointer;
+}
+.stepper input {
+  width: 3.2ch; background: none; border: none; border-bottom: 1px solid var(--line);
+  color: var(--count); text-align: center;
+  font: 400 30px var(--font-digits); font-variant-numeric: tabular-nums; padding: 2px 0;
+}
+.stepper input:focus { outline: none; border-color: var(--count); }
+.presets { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 420px; }
+.presets button {
+  background: none; border: 1px solid var(--line); color: var(--muted);
+  font: 400 14px var(--font-digits); padding: 7px 12px; border-radius: 999px; cursor: pointer;
+}
+
+.controls { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; padding-top: 10px; }
+.controls button {
+  height: 58px; border-radius: 10px; cursor: pointer;
+  font: 600 17px var(--font-ui); letter-spacing: .1em; text-transform: uppercase;
+}
+#reset { background: var(--panel); border: 1px solid var(--line); color: var(--muted); }
+#main { background: var(--count); border: none; color: var(--count-ink); }
+body[data-phase="run"] #main { background: var(--run); color: var(--run-ink); }
+body.paused #main { background: var(--fg); color: var(--bg); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+/* Full-screen mode while the time is running */
+body.immersive { padding-block: 0; }
+body.immersive .top, body.immersive .controls { display: none; }
+#info { width: 34px; padding: 7px 0; font-family: Georgia, "Times New Roman", serif; font-style: italic; font-size: 15px; text-transform: none; letter-spacing: 0; }
+body[data-phase="count"] #info, body[data-phase="run"] #info,
+body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; }
+#prefs { width: 34px; padding: 5px 0; display: inline-flex; align-items: center; justify-content: center; }
+#prefs svg { width: 18px; height: 18px; }
+.prefgroup { display: flex; flex-direction: column; gap: 10px; }
+.prefgroup h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; justify-content: space-between; }
+.prefgroup h3 span { font-family: var(--font-digits); font-size: 13px; letter-spacing: 0; text-transform: none; }
+.swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.card .sw {
+  margin: 0; align-self: auto; aspect-ratio: 1; width: 100%; height: auto; border-radius: 50% !important;
+  aspect-ratio: 1; max-width: 100%; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+}
+.card .sw[aria-checked="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 3px var(--panel); }
+.sw.custom { position: relative; overflow: hidden; background: conic-gradient(#ff4d3d, #ffe45c, #4cff7a, #6fb7ff, #ff6ad5, #ff4d3d); }
+.sw.custom input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; border: 0; padding: 0; }
+.preview { display: flex; gap: 10px; }
+.preview div { flex: 1; height: 54px; border-radius: 8px; background: var(--bg); border: 1px solid var(--line); position: relative; }
+.preview canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.cardrow { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.cardrow button { margin-top: 0; align-self: auto; }
+#prReset { color: var(--muted); }
+.credits {
+  position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.card {
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 26px 26px 22px; max-width: 340px; width: 100%;
+  display: flex; flex-direction: column; gap: 14px; text-align: left;
+}
+.card h2 { margin: 0; font: italic 400 40px Georgia, "Times New Roman", serif; color: var(--count); letter-spacing: .01em; }
+.card .ver { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: -8px; }
+.card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--fg); }
+.card a { color: var(--run); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--run) 40%, transparent); }
+.card .small { font-size: 13px; color: var(--muted); }
+.card button {
+  margin-top: 6px; align-self: flex-end; background: none; border: 1px solid var(--line); color: var(--fg);
+  font: 600 13px var(--font-ui); letter-spacing: .1em; text-transform: uppercase; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+}
+.hint {
+  position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  text-align: center; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--muted); opacity: .6; pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-height: 520px) {
+  .controls button { height: 46px; }
+  .stepper button { width: 38px; height: 38px; }
+  .stepper input { font-size: 24px; }
+}
+</style>
+<style>[hidden]{display:none!important}</style></head><body>
+
+<div class="top" id="top">
+  <div class="phase"><i></i><span id="phaseLabel">Set the countdown</span></div>
+  <div class="tools">
+    <button class="iconbtn" id="prefs" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    <button class="iconbtn" id="info" aria-label="About">i</button>
+    <button class="iconbtn" id="sound" aria-pressed="true">Sound</button>
+    <button class="iconbtn" id="full">Full screen</button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="fit" id="fit"><canvas id="digits" role="img" aria-label="01:00"></canvas></div>
+  <div class="setup" id="setup">
+    <div class="spin">
+      <div class="field">
+        <label for="min">Minutes</label>
+        <div class="stepper">
+          <button data-step="min:-1" aria-label="One minute less">−</button>
+          <input id="min" inputmode="numeric" maxlength="3" value="1">
+          <button data-step="min:1" aria-label="One minute more">+</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="sec">Seconds</label>
+        <div class="stepper">
+          <button data-step="sec:-5" aria-label="Five seconds less">−</button>
+          <input id="sec" inputmode="numeric" maxlength="2" value="0">
+          <button data-step="sec:5" aria-label="Five seconds more">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="presets">
+      <button data-preset="10">0:10</button>
+      <button data-preset="30">0:30</button>
+      <button data-preset="60">1:00</button>
+      <button data-preset="180">3:00</button>
+      <button data-preset="300">5:00</button>
+      <button data-preset="600">10:00</button>
+    </div>
+  </div>
+</div>
+
+<div class="controls" id="controls">
+  <button id="reset">Reset</button>
+  <button id="main">Start</button>
+</div>
+<div class="hint" id="hint" hidden>Tap for controls</div>
+<div class="credits" id="prefsPanel" hidden role="dialog" aria-modal="true" aria-labelledby="prTitle">
+  <div class="card">
+    <h2 id="prTitle" style="font-size:30px">Settings</h2>
+    <div class="preview"><div><canvas id="pvCount"></canvas></div><div><canvas id="pvRun"></canvas></div></div>
+    <div class="prefgroup">
+      <h3>Countdown colour <span id="hexCount"></span></h3>
+      <div class="swatches" id="swCount" role="radiogroup" aria-label="Countdown colour"></div>
+    </div>
+    <div class="prefgroup">
+      <h3>Stopwatch colour <span id="hexRun"></span></h3>
+      <div class="swatches" id="swRun" role="radiogroup" aria-label="Stopwatch colour"></div>
+    </div>
+    <div class="cardrow">
+      <button id="prReset">Defaults</button>
+      <button id="prClose">Close</button>
+    </div>
+  </div>
+</div>
+<div class="credits" id="credits" hidden role="dialog" aria-modal="true" aria-labelledby="crTitle">
+  <div class="card">
+    <h2 id="crTitle">Élan</h2>
+    <div class="ver">Version 1.0</div>
+    <p>A countdown that starts the stopwatch on its own the moment it reaches zero.</p>
+    <p>Designed and built by Alessandro Ciccarelli.<br><a href="https://alessandrociccarelli.com" target="_blank" rel="noopener">alessandrociccarelli.com</a></p>
+    <p class="small">© 2026. Works offline and collects no data.</p>
+    <button id="crClose">Close</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const body = document.body, digits = $('digits'), fitBox = $('fit'), setup = $('setup');
+  const minI = $('min'), secI = $('sec'), mainB = $('main'), label = $('phaseLabel'), hint = $('hint');
+
+  // Time is always computed from the system clock, never by counting ticks.
+  let phase = 'setup', target = 60000, startAt = 0, pausedAt = null;
+  let raf = 0, sound = true, wake = null, audio = null, hideTimer = 0;
+  let curText = '01:00';
+
+  try { const s = localStorage.getItem('cd-target'); if (s) target = Math.max(1000, +s); } catch (e) {}
+
+  // ---- Seven-segment digits drawn on a canvas, as large as possible ----
+  const SEG = { 0:'abcdef', 1:'bc', 2:'abged', 3:'abgcd', 4:'fgbc', 5:'afgcd', 6:'afgedc', 7:'abc', 8:'abcdefg', 9:'abcdfg' };
+  const DW = 0.58, GAP = 0.13, CW = 0.30, ROWGAP = 0.16, SKEW = 0.07; // proportions relative to digit height
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const rowUnits = s => [...s].reduce((u, ch, i) => u + (ch === ':' ? CW : DW) + (i ? GAP : 0), 0) + SKEW;
+
+  function drawDigit(ctx, x, y, h, d, on, off) {
+    const w = DW * h, t = 0.13 * h, g = t * 0.14;
+    const L = x + t / 2, R = x + w - t / 2, T = y + t / 2, M = y + h / 2, B = y + h - t / 2;
+    const hz = (x0, x1, yy) => [[x0 + g, yy], [x0 + g + t / 2, yy - t / 2], [x1 - g - t / 2, yy - t / 2], [x1 - g, yy], [x1 - g - t / 2, yy + t / 2], [x0 + g + t / 2, yy + t / 2]];
+    const vt = (xx, y0, y1) => [[xx, y0 + g], [xx + t / 2, y0 + g + t / 2], [xx + t / 2, y1 - g - t / 2], [xx, y1 - g], [xx - t / 2, y1 - g - t / 2], [xx - t / 2, y0 + g + t / 2]];
+    const segs = { a: hz(L, R, T), g: hz(L, R, M), d: hz(L, R, B), f: vt(L, T, M), b: vt(R, T, M), e: vt(L, M, B), c: vt(R, M, B) };
+    const lit = SEG[d] || '';
+    for (const k in segs) {
+      ctx.fillStyle = lit.includes(k) ? on : off;
+      ctx.beginPath();
+      segs[k].forEach(([px, py], i) => {
+        const sx = px + (y + h - py) * SKEW; // inclinazione da display LED
+        i ? ctx.lineTo(sx, py) : ctx.moveTo(sx, py);
+      });
+      ctx.closePath(); ctx.fill();
+    }
+  }
+  function drawColon(ctx, x, y, h, on) {
+    const s = 0.13 * h, cx = x + CW * h / 2 - s / 2;
+    ctx.fillStyle = on;
+    [0.3, 0.7].forEach(p => {
+      const py = y + h * p - s / 2;
+      ctx.fillRect(cx + (y + h - py - s / 2) * SKEW, py, s, s);
+    });
+  }
+  function draw() {
+    const W = fitBox.clientWidth, H = fitBox.clientHeight;
+    if (!W || !H) return;
+    const dpr = window.devicePixelRatio || 1;
+    if (digits.width !== Math.round(W * dpr) || digits.height !== Math.round(H * dpr)) {
+      digits.width = Math.round(W * dpr); digits.height = Math.round(H * dpr);
+    }
+    const ctx = digits.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    // Two layouts: one row, or minutes stacked over seconds. Whichever gives bigger digits wins.
+    const one = [curText], stack = curText.split(':');
+    // Digits take the full available height; if the width is too short they narrow
+    // horizontally (down to 55% of their normal shape) instead of shrinking.
+    const MINSX = 0.55;
+    const layout = rows => {
+      const n = rows.length, u = Math.max(...rows.map(rowUnits));
+      let h = H * 0.96 / (n + (n - 1) * ROWGAP);
+      let sx = Math.min(1, W * 0.97 / (u * h));
+      if (sx < MINSX) { sx = MINSX; h = W * 0.97 / (u * MINSX); }
+      return { rows, h, sx, score: h * Math.sqrt(sx) };
+    };
+    const A = layout(one), Bl = layout(stack);
+    const { rows, h, sx } = Bl.score > A.score * 1.1 ? Bl : A;
+    const on = css(phase === 'run' ? '--run' : '--count');
+    const off = 'rgba(255,255,255,0.045)';
+    const totalH = rows.length * h + (rows.length - 1) * ROWGAP * h;
+    let y = (H - totalH) / 2;
+    for (const r of rows) {
+      ctx.save();
+      ctx.translate((W - rowUnits(r) * h * sx) / 2, 0);
+      ctx.scale(sx, 1);
+      let x = 0;
+      [...r].forEach((ch, i) => {
+        if (i) x += GAP * h;
+        if (ch === ':') { drawColon(ctx, x, y, h, on); x += CW * h; }
+        else { drawDigit(ctx, x, y, h, +ch, on, off); x += DW * h; }
+      });
+      ctx.restore();
+      y += h * (1 + ROWGAP);
+    }
+  }
+  const fit = draw;
+  new ResizeObserver(draw).observe(fitBox);
+  window.addEventListener('orientationchange', () => setTimeout(draw, 250));
+
+  function setInputs(ms) {
+    const t = Math.round(ms / 1000);
+    minI.value = Math.floor(t / 60); secI.value = t % 60;
+    render();
+  }
+  function readInputs() {
+    const m = Math.max(0, Math.min(999, parseInt(minI.value, 10) || 0));
+    const s = Math.max(0, Math.min(59, parseInt(secI.value, 10) || 0));
+    target = Math.max(1, m * 60 + s) * 1000;
+    try { localStorage.setItem('cd-target', target); } catch (e) {}
+  }
+  function fmt(t) {
+    const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60;
+    const p = n => String(n).padStart(2, '0');
+    return h ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  }
+  function show(text) {
+    if (curText === text && show.phase === phase) return;
+    curText = text; show.phase = phase;
+    digits.setAttribute('aria-label', text);
+    draw();
+  }
+  const now = () => pausedAt ?? Date.now();
+
+  function render() {
+    if (phase === 'setup') {
+      const m = parseInt(minI.value, 10) || 0, s = Math.min(59, parseInt(secI.value, 10) || 0);
+      show(fmt(m * 60 + s)); return;
+    }
+    const el = now() - startAt;
+    if (phase === 'count') {
+      const left = target - el;
+      if (left <= 0) { toRun(startAt + target); return render(); }
+      show(fmt(Math.ceil(left / 1000)));
+    } else {
+      show(fmt(Math.floor(el / 1000)));
+    }
+  }
+  function loop() { render(); raf = requestAnimationFrame(loop); }
+
+  function toRun(at) {
+    phase = 'run'; startAt = at;
+    body.dataset.phase = 'run';
+    label.textContent = 'Elapsed time';
+    beep();
+    try { if (window.Android) Android.vibrate(200); else if (navigator.vibrate) navigator.vibrate([200, 80, 200]); } catch (e) {}
+    $('stage').classList.remove('flash'); void $('stage').offsetWidth; $('stage').classList.add('flash');
+  }
+
+  // Controls: hidden while running, brought back by a tap for 4 seconds.
+  function immerse() {
+    clearTimeout(hideTimer);
+    if (phase === 'setup' || pausedAt !== null) { body.classList.remove('immersive'); hint.hidden = true; fit(); return; }
+    body.classList.add('immersive'); hint.hidden = false;
+    setTimeout(() => { hint.hidden = true; }, 2500);
+    fit();
+  }
+  function revealControls() {
+    body.classList.remove('immersive'); hint.hidden = true; fit();
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(immerse, 4000);
+  }
+
+  function unlockAudio() {
+    try {
+      if (!audio) audio = new (window.AudioContext || window.webkitAudioContext)();
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) { audio = null; }
+  }
+  function beep() {
+    if (!sound || !audio) return;
+    const t0 = audio.currentTime;
+    [0, .28].forEach((d, i) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = i ? 1320 : 880;
+      g.gain.setValueAtTime(0, t0 + d);
+      g.gain.linearRampToValueAtTime(.4, t0 + d + .01);
+      g.gain.exponentialRampToValueAtTime(.0001, t0 + d + .45);
+      o.connect(g).connect(audio.destination);
+      o.start(t0 + d); o.stop(t0 + d + .5);
+    });
+  }
+  async function keepAwake() {
+    try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && phase !== 'setup' && pausedAt === null) keepAwake();
+  });
+
+  function start() {
+    unlockAudio(); readInputs();
+    phase = 'count'; startAt = Date.now(); pausedAt = null;
+    body.dataset.phase = 'count'; body.classList.remove('paused');
+    label.textContent = 'Countdown';
+    setup.hidden = true; mainB.textContent = 'Pause';
+    keepAwake(); cancelAnimationFrame(raf); loop(); immerse();
+  }
+  function pause() {
+    pausedAt = Date.now(); body.classList.add('paused'); mainB.textContent = 'Resume';
+    cancelAnimationFrame(raf); render(); immerse();
+  }
+  function resume() {
+    unlockAudio();
+    startAt += Date.now() - pausedAt; pausedAt = null;
+    body.classList.remove('paused'); mainB.textContent = 'Pause';
+    keepAwake(); loop(); immerse();
+  }
+  function reset() {
+    cancelAnimationFrame(raf); clearTimeout(hideTimer);
+    phase = 'setup'; pausedAt = null; body.dataset.phase = ''; body.classList.remove('paused');
+    label.textContent = 'Set the countdown';
+    setup.hidden = false; mainB.textContent = 'Start';
+    try { wake && wake.release(); } catch (e) {} wake = null;
+    immerse(); setInputs(target);
+  }
+
+  mainB.addEventListener('click', () => {
+    if (phase === 'setup') start();
+    else if (pausedAt !== null) resume();
+    else pause();
+  });
+  $('reset').addEventListener('click', reset);
+  $('stage').addEventListener('click', () => {
+    if (phase === 'setup' || pausedAt !== null) return;
+    if (body.classList.contains('immersive')) revealControls(); else immerse();
+  });
+  $('controls').addEventListener('click', () => { if (!body.classList.contains('immersive') && phase !== 'setup' && pausedAt === null) revealControls(); });
+
+  document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
+    const [k, d] = b.dataset.step.split(':');
+    let m = parseInt(minI.value, 10) || 0, s = parseInt(secI.value, 10) || 0;
+    if (k === 'min') m = Math.max(0, Math.min(999, m + +d));
+    else { let t = Math.max(0, m * 60 + s + +d); m = Math.floor(t / 60); s = t % 60; }
+    minI.value = m; secI.value = s; render();
+  }));
+  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setInputs(+b.dataset.preset * 1000)));
+  [minI, secI].forEach(i => i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, ''); render(); }));
+
+  $('sound').addEventListener('click', e => {
+    sound = !sound; e.currentTarget.setAttribute('aria-pressed', sound);
+    if (sound) { unlockAudio(); beep(); }
+  });
+  // Full screen: entered automatically on Start, or from the button at the top.
+  const isFull = () => document.fullscreenElement || document.webkitFullscreenElement;
+  function goFull() {
+    if (window.Android || isFull()) return;
+    const el = document.documentElement;
+    try {
+      const p = el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' })
+              : el.webkitRequestFullscreen ? el.webkitRequestFullscreen() : null;
+      if (p && p.catch) p.catch(() => { label.textContent = 'Full screen not allowed'; });
+      if (!p && !el.webkitRequestFullscreen) label.textContent = 'Full screen not available';
+    } catch (e) { label.textContent = 'Full screen not allowed'; }
+  }
+  $('full').addEventListener('click', () => {
+    if (isFull()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else goFull();
+  });
+  document.addEventListener('fullscreenchange', () => { $('full').textContent = isFull() ? 'Exit' : 'Full screen'; setTimeout(fit, 150); });
+  mainB.addEventListener('click', () => { if (phase === 'count' && pausedAt === null) goFull(); });
+
+  // ---- Settings: countdown and stopwatch colours ----
+  const DEFAULTS = { count: '#f2a541', run: '#9fe3d6' };
+  const PALETTE = [
+    ['#f2a541', 'Amber'], ['#9fe3d6', 'Aqua'], ['#ff4d3d', 'LED red'], ['#4cff7a', 'LED green'],
+    ['#6fb7ff', 'Ice blue'], ['#ffe45c', 'Yellow'], ['#ff8a2b', 'Nixie orange'], ['#ff6ad5', 'Magenta'], ['#f3efe6', 'Warm white']
+  ];
+  let colors = { ...DEFAULTS };
+  try { const c = JSON.parse(localStorage.getItem('elan-colors') || 'null'); if (c && c.count && c.run) colors = c; } catch (e) {}
+
+  // Button text: dark on light colours, light on dark colours.
+  function ink(hex) {
+    const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+    const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    return lum > 0.5 ? '#111' : '#f5f5f5';
+  }
+  function applyColors(save) {
+    const st = document.documentElement.style;
+    st.setProperty('--count', colors.count); st.setProperty('--run', colors.run);
+    st.setProperty('--count-ink', ink(colors.count)); st.setProperty('--run-ink', ink(colors.run));
+    $('hexCount').textContent = colors.count.toUpperCase();
+    $('hexRun').textContent = colors.run.toUpperCase();
+    if (save) { try { localStorage.setItem('elan-colors', JSON.stringify(colors)); } catch (e) {} }
+    buildSwatches('swCount', 'count'); buildSwatches('swRun', 'run');
+    drawPreview('pvCount', '00:10', colors.count); drawPreview('pvRun', '00:03', colors.run);
+    show.phase = null; render();
+  }
+  function buildSwatches(id, key) {
+    const box = $(id); box.innerHTML = '';
+    const inPalette = PALETTE.some(([c]) => c === colors[key]);
+    PALETTE.forEach(([c, name]) => {
+      const b = document.createElement('button');
+      b.className = 'sw'; b.style.background = c;
+      b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name);
+      b.setAttribute('aria-checked', colors[key] === c);
+      b.addEventListener('click', () => { colors[key] = c; applyColors(true); });
+      box.appendChild(b);
+    });
+    // Custom colour
+    const w = document.createElement('label');
+    w.className = 'sw custom'; w.setAttribute('aria-checked', !inPalette); w.setAttribute('aria-label', 'Custom colour');
+    if (!inPalette) w.style.background = colors[key];
+    const inp = document.createElement('input'); inp.type = 'color'; inp.value = colors[key];
+    inp.addEventListener('input', () => { colors[key] = inp.value; applyColors(true); });
+    w.appendChild(inp); box.appendChild(w);
+  }
+  function drawPreview(id, text, color) {
+    const cv = $(id), W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    const dpr = window.devicePixelRatio || 1;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const h = H * 0.62, u = rowUnits(text);
+    ctx.save(); ctx.translate((W - u * h) / 2, 0);
+    let x = 0, y = (H - h) / 2;
+    [...text].forEach((ch, i) => {
+      if (i) x += GAP * h;
+      if (ch === ':') { drawColon(ctx, x, y, h, color); x += CW * h; }
+      else { drawDigit(ctx, x, y, h, +ch, color, 'rgba(255,255,255,0.045)'); x += DW * h; }
+    });
+    ctx.restore();
+  }
+  $('prefs').addEventListener('click', () => { $('prefsPanel').hidden = false; applyColors(false); $('prClose').focus(); });
+  $('prClose').addEventListener('click', () => { $('prefsPanel').hidden = true; });
+  $('prReset').addEventListener('click', () => { colors = { ...DEFAULTS }; applyColors(true); });
+  $('prefsPanel').addEventListener('click', e => { if (e.target.id === 'prefsPanel') $('prefsPanel').hidden = true; });
+  applyColors(false);
+
+  $('info').addEventListener('click', () => { $('credits').hidden = false; $('crClose').focus(); });
+  $('crClose').addEventListener('click', () => { $('credits').hidden = true; });
+  $('credits').addEventListener('click', e => { if (e.target.id === 'credits') $('credits').hidden = true; });
+
+  // Inside the Android app, full screen is handled by the app itself.
+  const inApp = !!window.Android;
+  if (inApp) $('full').hidden = true;
+
+  setInputs(target); fit();
+})();
+</script>
+</body></html>

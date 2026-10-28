@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Élan</string>
+    <color name="bg">#0D0F10</color>
+    <color name="amber">#F2A541</color>
+
+    <style name="Theme.Countdown" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/bg</item>
+        <item name="android:navigationBarColor">@color/bg</item>
+        <item name="android:windowFullscreen">true</item>
+    </style>
+</resources>
