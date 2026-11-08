@@ -164,7 +164,7 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
   <div class="tools">
     <button class="iconbtn" id="prefs" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
     <button class="iconbtn" id="info" aria-label="About">i</button>
-    <button class="iconbtn" id="sound" aria-pressed="true">Sound</button>
+    <button class="iconbtn" id="sound" aria-pressed="false" aria-label="Sound and vibration at zero">Sound</button>
     <button class="iconbtn" id="full">Full screen</button>
   </div>
 </div>
@@ -227,7 +227,7 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
 <div class="credits" id="credits" hidden role="dialog" aria-modal="true" aria-labelledby="crTitle">
   <div class="card">
     <h2 id="crTitle">Élan</h2>
-    <div class="ver">Version 1.0</div>
+    <div class="ver">Version 1.0.2</div>
     <p>A countdown that starts the stopwatch on its own the moment it reaches zero.</p>
     <p>Designed and built by Alessandro Ciccarelli.<br><a href="https://alessandrociccarelli.com" target="_blank" rel="noopener">alessandrociccarelli.com</a></p>
     <p class="small">© 2026. Free software under the GPL 3. Works offline and collects no data.</p>
@@ -243,7 +243,7 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
 
   // Time is always computed from the system clock, never by counting ticks.
   let phase = 'setup', target = 60000, startAt = 0, pausedAt = null;
-  let raf = 0, sound = true, wake = null, audio = null, hideTimer = 0;
+  let raf = 0, sound = false, wake = null, audio = null, hideTimer = 0;
   let curText = '01:00';
 
   try { const s = localStorage.getItem('cd-target'); if (s) target = Math.max(1000, +s); } catch (e) {}
@@ -369,8 +369,11 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
     phase = 'run'; startAt = at;
     body.dataset.phase = 'run';
     label.textContent = 'Elapsed time';
-    beep();
-    try { if (window.Android) Android.vibrate(200); else if (navigator.vibrate) navigator.vibrate([200, 80, 200]); } catch (e) {}
+    // Tone and vibration only when Sound is on (off at every start).
+    if (sound) {
+      beep();
+      try { if (window.Android) Android.vibrate(200); else if (navigator.vibrate) navigator.vibrate([200, 80, 200]); } catch (e) {}
+    }
     $('stage').classList.remove('flash'); void $('stage').offsetWidth; $('stage').classList.add('flash');
   }
 

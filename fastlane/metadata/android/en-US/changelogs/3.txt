@@ -1,0 +1,1 @@
+Sound is now off by default: at zero the app switches to the stopwatch silently and without vibrating. Turn Sound on to get the double tone and the vibration.
