@@ -1,10 +1,13 @@
 # Élan for ensembles: protections for the whole folder (Apache)
 
-# ask search engines not to index or archive anything
 <IfModule mod_headers.c>
+  # ask search engines not to index or archive anything
   Header set X-Robots-Tag "noindex, nofollow, noarchive"
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "no-referrer"
+  # the pages cannot be shown inside another site, and run only the scripts of this folder
+  Header set X-Frame-Options "DENY"
+  Header set Content-Security-Policy "default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"
 </IfModule>
 
 # instructions and configuration are not readable from the web

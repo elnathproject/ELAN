@@ -16,28 +16,40 @@ Web hosting with PHP 7.4 or later, shared hosting included. No database: the sta
 
 ## Installation
 
-1. In `config.php`, replace `changeme` with a password for the conductor. Optionally set an ensemble code.
+1. In `config.php`, replace `changeme` with a password for the conductor: at least 8 characters, better a phrase of a few words, not used anywhere else. Optionally set an ensemble code.
 2. Upload the whole `web` folder to the server by FTP, including the hidden `.htaccess` files, with a name of your choice (for example `elan`). Folders 755, files 644.
-3. Check the protections: `https://yoursite.com/elan/config.php` and `https://yoursite.com/elan/data/state.json` must answer *Forbidden* (403), not show their content.
+3. Check the protections: `https://yoursite.com/elan/data/state.json` must answer *Forbidden* (403), not show its content.
+4. Open the conductor's page with the `https://` address. A red band at the top lists what is wrong on the server, if anything (permissions too wide, missing protection files, password too short).
 
 ## Use
 
-- **Conductor:** open `director.html` (for example `https://yoursite.com/elan/director.html`) and enter the password. *Remember on this computer* keeps you logged in after the browser is closed; otherwise the password is forgotten when the tab is closed. Several devices can control the same timer.
+- **Conductor:** open `director.html` (for example `https://yoursite.com/elan/director.html`) and enter the password. *Remember on this computer* keeps you logged in for 30 days; otherwise the session ends when the tab is closed, or after 12 hours. *Log out* ends it at once. Several devices can control the same timer.
 - **Performers:** open the folder address (`https://yoursite.com/elan/`), shown under *Settings* on the conductor's page with a *Copy* button. One tap shows the timer full screen and keeps the screen on.
 - **Ensemble code:** if `ENSEMBLE_CODE` is set, the address for the performers carries it (`…/elan/?code=4719`) and the displays show nothing without it. Without a code, anyone who knows the address can watch the timer, but only the conductor can control it.
 - **Pedal or keyboard (conductor):** right or down arrow, Page Down, Space or Enter act as the main button (Start, Pause, Resume); left or up arrow, Page Up act as Reset.
 - The top bar of the conductor's page shows how many displays are connected.
 
+## Security
+
+- **Password.** It is sent once, at login, in the body of the request; the browser then keeps a random session token, never the password. The server stores only keyed hashes of the tokens and of the addresses that typed a wrong password. Changing the password in `config.php` ends every session.
+- **Guessing.** After five wrong passwords from the same address, logins from that address are refused for ten minutes (IPv6 addresses count by /64 network). A conductor who is already logged in keeps working. Behind a CDN or reverse proxy all visitors share the proxy's address, so the block would apply to everyone at once.
+- **Default and empty password.** `changeme` is accepted only from the server's own computer and never through a proxy; an empty password is always refused.
+- **Ensemble code.** A light barrier, not a password: it travels in the address and can be found by trying. It keeps casual visitors out; it does not protect anything but the view of the timer.
+- **Pages.** No inline scripts: a Content-Security-Policy allows only the scripts of this folder, and the conductor's page refuses to run inside another site's frame. Whatever the displays receive is checked by the server first (colours, lengths).
+- **Requests.** Bodies over 4 KB are refused; PHP warnings are never shown.
+- **HTTPS.** On plain `http://` the password and the token travel unprotected: the login page warns about it. Use `https://`.
+- **nginx.** `.htaccess` files are ignored. Add to the site configuration, with your folder name: `location ~ ^/elan/(data/|config\.php$|README\.md$) { deny all; }`.
+
 ## Files
 
 | File | Content |
 | :- | :- |
-| `api.php` | server: timer state, conductor's password with a block after five wrong attempts, ensemble code |
+| `api.php` | server: timer state, conductor's login and sessions, block after five wrong passwords, ensemble code |
 | `config.php` | password, ensemble code, lead time of the commands |
-| `director.html` | conductor's page |
-| `index.html` | performers' display |
+| `director.html`, `director.js` | conductor's page |
+| `index.html`, `display.js` | performers' display |
 | `timer.js` | code shared by the two pages: seven-segment digits, clock offset, time computation |
-| `.htaccess`, `data/.htaccess`, `data/index.html` | protections: no indexing, `config.php` and `data/` not readable from the web |
+| `.htaccess`, `data/.htaccess`, `data/index.html` | protections: no indexing, security headers, `config.php` and `data/` not readable from the web |
 
 ## Development
 

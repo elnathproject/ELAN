@@ -1,12 +1,15 @@
 <?php
-// Password of the conductor's page. Change it before uploading the folder to the server.
+// Password of the conductor's page. Change it before uploading the folder to the server:
+// at least 8 characters, better a phrase of three or four words, not used anywhere else.
 define('DIRECTOR_PASSWORD', 'changeme');
 // While it stays "changeme" the conductor's page only works when testing on your own computer
-// (localhost): on the server the conductor is asked to change it.
+// (localhost): on the server the conductor is asked to change it. An empty password is refused.
+// Changing the password logs out every conductor.
 
 // Ensemble code: if set, the displays only show the timer when the address carries it,
 // for example https://yoursite.com/elan/?code=4719 (the conductor's page shows the full address).
 // Left empty, anyone who knows the address can watch the timer (they cannot control it).
+// The code is a light barrier, not a password: it travels in the address and can be guessed by trying.
 define('ENSEMBLE_CODE', '');
 
 // Lead time, in milliseconds, with which Start, Pause and Resume reach the displays: every display

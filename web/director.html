@@ -10,6 +10,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0d0f10">
 <meta name="robots" content="noindex, nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
 <title>Élan · conductor</title>
 <style>
 :root {
@@ -72,7 +74,8 @@ button:focus-visible, input:focus-visible { outline:2px solid var(--fg); outline
 .card .row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
 .card .btn { background:none; border:1px solid var(--line); color:var(--fg); font:600 13px var(--font-ui); letter-spacing:.1em; text-transform:uppercase; padding:9px 16px; border-radius:8px; }
 .card .btn.primary { background:var(--count); color:var(--count-ink); border:none; }
-.card .err { color:#e66; min-height:1em; }
+.card .err { color:#e66; }
+.card #loginMsg { min-height:1em; }
 .swatches { display:grid; grid-template-columns:repeat(9, 1fr); gap:8px; }
 .sw { aspect-ratio:1; width:100%; border-radius:50%; border:2px solid transparent; padding:0; box-shadow:inset 0 0 0 1px rgba(0,0,0,.25); }
 .sw[aria-checked="true"] { border-color:var(--fg); box-shadow:inset 0 0 0 3px var(--panel); }
@@ -137,6 +140,7 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
     <p>Conductor's page. The performers open the address shown in Settings.</p>
     <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
     <label class="check"><input type="checkbox" id="remember"> Remember on this computer</label>
+    <p class="err" id="httpWarn"></p>
     <p class="err" id="loginMsg"></p>
     <div class="row"><span></span><button class="btn primary" type="submit">Enter</button></div>
   </form>
@@ -159,184 +163,6 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
 </div>
 
 <script src="timer.js"></script>
-<script>
-(() => {
-  const $ = id => document.getElementById(id);
-  const body = document.body, minI = $('min'), secI = $('sec'), mainB = $('main');
-  const PALETTE = [
-    ['#f2a541', 'Amber'], ['#9fe3d6', 'Aqua'], ['#ff4d3d', 'LED red'], ['#4cff7a', 'LED green'],
-    ['#6fb7ff', 'Ice blue'], ['#ffe45c', 'Yellow'], ['#ff8a2b', 'Nixie orange'], ['#ff6ad5', 'Magenta'], ['#f3efe6', 'Warm white']
-  ];
-
-  // ---- password: kept in this tab only, or on this computer if "remember" is ticked ----
-  const ss = { get(k) { try { return sessionStorage.getItem(k) || localStorage.getItem(k); } catch (e) { return null; } },
-               set(k, v, keep) { try { sessionStorage.setItem(k, v); if (keep) localStorage.setItem(k, v); } catch (e) {} },
-               del(k) { try { sessionStorage.removeItem(k); localStorage.removeItem(k); } catch (e) {} } };
-  let key = ss.get('elan.key');
-  let S = null, busy = false, lastRev = null;
-
-  async function api(a, extra = {}) {
-    const t0 = Date.now();
-    const r = await fetch('api.php?a=' + a, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
-                                              body: JSON.stringify({ key, ...extra }) });
-    const j = await r.json();
-    if (j.type !== 'state') { loginError(j); throw new Error(j.type || 'error'); }
-    Elan.sample(t0, j.now, Date.now());
-    S = j; lastRev = j.rev; update();
-    return j;
-  }
-  function loginError(j) {
-    $('login').hidden = false;
-    $('loginMsg').textContent = j.type === 'blocked' ? `Too many wrong passwords: try again in ${j.minutes} minutes.`
-      : j.type === 'default-password' ? 'The password is still "changeme": change it in config.php on the server.'
-      : key ? 'Wrong password.' : '';
-    key = null; ss.del('elan.key');
-    $('pw').focus();
-  }
-  $('loginForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    key = $('pw').value;
-    try {
-      await api('state');
-      ss.set('elan.key', key, $('remember').checked);
-      $('login').hidden = true; $('pw').value = '';
-      if (S.since === null && S.acc === 0) setInputs(S.target);
-    } catch (err) {}
-  });
-  $('logout').addEventListener('click', () => { key = null; ss.del('elan.key'); $('login').hidden = false; $('loginMsg').textContent = ''; $('pw').focus(); });
-
-  // ---- polling: other devices may control the same timer ----
-  async function poll() {
-    for (;;) {
-      if (key && !busy) { try { await api('state'); $('login').hidden = true; } catch (e) {} }
-      await new Promise(r => setTimeout(r, 600));
-    }
-  }
-
-  // ---- commands ----
-  function readSeconds() {
-    const m = Math.max(0, Math.min(999, parseInt(minI.value, 10) || 0));
-    const s = Math.max(0, Math.min(59, parseInt(secI.value, 10) || 0));
-    return Math.max(1, m * 60 + s);
-  }
-  function setInputs(ms) { const t = Math.round(ms / 1000); minI.value = Math.floor(t / 60); secI.value = t % 60; }
-  async function send(a, extra) {
-    if (!key) return;
-    if (busy) { if (a === 'length') setTimeout(() => send(a, extra), 200); return; } // a length is never lost; a pedal press while busy is
-    busy = true;
-    try { await api(a, extra); } catch (e) {} finally { busy = false; }
-  }
-  function mainAction() {
-    if (!S) return;
-    const setup = S.since === null && S.acc === 0;
-    if (setup) send('start', { seconds: readSeconds() });
-    else if (S.until !== null) send('resume');
-    else send('pause');
-  }
-  mainB.addEventListener('click', mainAction);
-  $('reset').addEventListener('click', () => send('reset'));
-
-  // length shown on the displays while setting up
-  let lenTimer = 0;
-  function lengthChanged() {
-    if (S) { S.target = readSeconds() * 1000; }
-    clearTimeout(lenTimer); lenTimer = setTimeout(() => send('length', { seconds: readSeconds() }), 350);
-  }
-  document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => {
-    const [k, d] = b.dataset.step.split(':');
-    let m = parseInt(minI.value, 10) || 0, s = parseInt(secI.value, 10) || 0;
-    if (k === 'min') m = Math.max(0, Math.min(999, m + +d));
-    else { const t = Math.max(0, m * 60 + s + +d); m = Math.floor(t / 60); s = t % 60; }
-    minI.value = m; secI.value = s; lengthChanged();
-  }));
-  document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => { setInputs(+b.dataset.preset * 1000); lengthChanged(); }));
-  [minI, secI].forEach(i => i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, ''); lengthChanged(); }));
-
-  // Bluetooth page-turner pedal or keyboard, as in the Android app
-  const PEDAL_MAIN = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
-  const PEDAL_RESET = ['ArrowLeft', 'ArrowUp', 'PageUp'];
-  document.addEventListener('keydown', e => {
-    if (!$('login').hidden || !$('prefs').hidden) return;
-    if (e.ctrlKey || e.altKey || e.metaKey) return;
-    const toMain = PEDAL_MAIN.includes(e.key), toReset = PEDAL_RESET.includes(e.key);
-    if (!toMain && !toReset) return;
-    e.preventDefault();
-    if (e.repeat) return;
-    if (document.activeElement && document.activeElement !== body) document.activeElement.blur();
-    toMain ? mainAction() : send('reset');
-  }, true);
-  document.addEventListener('keyup', e => { if (e.key === ' ' && $('login').hidden && $('prefs').hidden) e.preventDefault(); }, true);
-
-  // ---- settings: colours, vibration, address ----
-  function swatches(boxId, k) {
-    const box = $(boxId); box.innerHTML = '';
-    PALETTE.forEach(([c, name]) => {
-      const b = document.createElement('button');
-      b.className = 'sw'; b.style.background = c; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name);
-      b.setAttribute('aria-checked', S && S[k] === c);
-      b.addEventListener('click', () => send('look', { [k]: c }));
-      box.appendChild(b);
-    });
-  }
-  function displayAddress() {
-    const u = new URL('./', location.href);
-    if (S && S.codeRequired) u.searchParams.set('code', S.code);
-    return u.href;
-  }
-  $('prefsBtn').addEventListener('click', () => { $('prefs').hidden = false; update(); $('prefsClose').focus(); });
-  $('prefsClose').addEventListener('click', () => { $('prefs').hidden = true; });
-  $('prefs').addEventListener('click', e => { if (e.target.id === 'prefs') $('prefs').hidden = true; });
-  $('vibrate').addEventListener('change', e => send('look', { vibrate: e.target.checked }));
-  $('copy').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(displayAddress()); $('copy').textContent = 'Copied'; }
-    catch (e) { $('copy').textContent = 'Select and copy'; }
-    setTimeout(() => { $('copy').textContent = 'Copy'; }, 2000);
-  });
-
-  // ---- what changes with the state ----
-  function ink(hex) {
-    const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
-    return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.5 ? '#111' : '#f5f5f5';
-  }
-  let sig = '';
-  function update() {
-    if (!S) return;
-    const st = document.documentElement.style;
-    st.setProperty('--count', S.count); st.setProperty('--run', S.run);
-    st.setProperty('--count-ink', ink(S.count)); st.setProperty('--run-ink', ink(S.run));
-    $('online').textContent = S.online === 1 ? '1 display' : `${S.online} displays`;
-    $('warnings').innerHTML = '';
-    S.warnings.forEach(w => { const d = document.createElement('div'); d.className = 'warn'; d.textContent = w; $('warnings').appendChild(d); });
-    const s = JSON.stringify([S.count, S.run, S.vibrate, S.code, S.codeRequired]);
-    if (s !== sig) { // redrawn only when something changes, not at every poll
-      sig = s;
-      swatches('swCount', 'count'); swatches('swRun', 'run');
-      $('hexCount').textContent = S.count.toUpperCase(); $('hexRun').textContent = S.run.toUpperCase();
-      $('vibrate').checked = S.vibrate;
-      $('addr').textContent = displayAddress();
-      $('addrNote').textContent = S.codeRequired ? 'Includes the ensemble code.' : 'Anyone with this address can watch the timer.';
-    }
-  }
-  const LABEL = { setup: 'Set the countdown', count: 'Countdown', run: 'Elapsed time' };
-  function frame() {
-    if (S) {
-      const v = Elan.view(S);
-      body.dataset.phase = v.phase === 'setup' ? '' : v.phase;
-      body.classList.toggle('paused', S.until !== null);
-      body.classList.toggle('waiting', v.waiting);
-      $('label').textContent = S.until !== null ? 'Paused' : v.waiting ? 'Starting…' : LABEL[v.phase];
-      $('setup').hidden = v.phase !== 'setup';
-      mainB.textContent = v.phase === 'setup' ? 'Start' : S.until !== null ? 'Resume' : 'Pause';
-      Elan.draw($('digits'), $('fit'), v.text, v.color);
-    }
-    requestAnimationFrame(frame);
-  }
-
-  if (key) { $('login').hidden = true; api('state').then(() => { if (S.since === null && S.acc === 0) setInputs(S.target); }).catch(() => {}); }
-  else $('pw').focus();
-  poll();
-  requestAnimationFrame(frame);
-})();
-</script>
+<script src="director.js"></script>
 </body>
 </html>
