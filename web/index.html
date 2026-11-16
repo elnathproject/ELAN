@@ -32,6 +32,10 @@
   /* first screen: one tap allows full screen, screen kept on and vibration */
   #gate { position:fixed; inset:0; z-index:5; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
     background:var(--bg); text-align:center; padding:24px; cursor:pointer; }
+  #closed { position:fixed; inset:0; z-index:4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+    background:var(--bg); text-align:center; padding:24px; }
+  #closed h1 { font:italic 400 52px Georgia,"Times New Roman",serif; color:var(--muted); }
+  #closed p { font-size:15px; line-height:1.5; color:var(--muted); max-width:30em; }
   #gate h1 { font:italic 400 52px Georgia,"Times New Roman",serif; color:var(--count); }
   #gate p { font-size:15px; line-height:1.5; color:var(--fg); max-width:30em; }
   #gate .tap { font-size:13px; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); border:1px solid var(--line); border-radius:10px; padding:14px 22px; }
@@ -45,6 +49,11 @@
   <h1>Élan</h1>
   <p id="gateMsg">The conductor controls this timer.</p>
   <div class="tap" id="gateTap">Tap to show the timer</div>
+</div>
+
+<div id="closed" hidden>
+  <h1>Élan</h1>
+  <p>The timer is not open yet.<br>It appears here by itself when the conductor opens it.</p>
 </div>
 
 <div id="stage">

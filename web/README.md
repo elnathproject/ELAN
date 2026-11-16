@@ -12,7 +12,7 @@ A display that reloads, or whose screen turns off and on again, shows the right 
 
 ## Requirements
 
-Web hosting with PHP 7.4 or later, shared hosting included. No database: the state is a small JSON file in `data/`. The protections use `.htaccess`, so they apply on Apache; on nginx they must be repeated in the server configuration. Use HTTPS: browsers keep the screen on only on secure pages.
+Web hosting with PHP 7.4 or later, shared hosting included. No database: the state is a small JSON file in `data/`. The protections use `.htaccess`, so they apply on Apache; on nginx they must be repeated in the server configuration. HTTPS is required: the server answers nothing over plain `http://`.
 
 ## Installation
 
@@ -23,6 +23,7 @@ Web hosting with PHP 7.4 or later, shared hosting included. No database: the sta
 
 ## Use
 
+- **Opening and closing:** the performers see the timer only while it is open. Logging in as conductor opens it; *Log out* closes it, and the displays go back to a waiting page that opens again by itself. If the conductor's page loses the connection (computer asleep, network down) the timer stays visible for two hours, then closes (`CLOSE_AFTER_MINUTES` in `config.php`). While closed, the server tells visitors nothing.
 - **Conductor:** open `director.html` (for example `https://yoursite.com/elan/director.html`) and enter the password. *Remember on this computer* keeps you logged in for 30 days; otherwise the session ends when the tab is closed, or after 12 hours. *Log out* ends it at once. Several devices can control the same timer.
 - **Performers:** open the folder address (`https://yoursite.com/elan/`), shown under *Settings* on the conductor's page with a *Copy* button. One tap shows the timer full screen and keeps the screen on.
 - **Ensemble code:** if `ENSEMBLE_CODE` is set, the address for the performers carries it (`…/elan/?code=4719`) and the displays show nothing without it. Without a code, anyone who knows the address can watch the timer, but only the conductor can control it.
@@ -32,12 +33,12 @@ Web hosting with PHP 7.4 or later, shared hosting included. No database: the sta
 ## Security
 
 - **Password.** It is sent once, at login, in the body of the request; the browser then keeps a random session token, never the password. The server stores only keyed hashes of the tokens and of the addresses that typed a wrong password. Changing the password in `config.php` ends every session.
-- **Guessing.** After five wrong passwords from the same address, logins from that address are refused for ten minutes (IPv6 addresses count by /64 network). A conductor who is already logged in keeps working. Behind a CDN or reverse proxy all visitors share the proxy's address, so the block would apply to everyone at once.
+- **Guessing.** After five wrong passwords in ten minutes from the same address, logins from that address are refused for the rest of the ten minutes (IPv6 addresses count by /64 network). After thirty wrong passwords from all addresses together, every login is refused in the same way: this stops bots that try from many addresses, and refused attempts cost the server almost nothing. Both limits are in `config.php`. A conductor who is already logged in keeps working in both cases. The price of the second limit: whoever keeps sending wrong passwords can keep new logins closed, so log in before the concert with *Remember on this computer*.
 - **Default and empty password.** `changeme` is accepted only from the server's own computer and never through a proxy; an empty password is always refused.
-- **Ensemble code.** A light barrier, not a password: it travels in the address and can be found by trying. It keeps casual visitors out; it does not protect anything but the view of the timer.
+- **Performers.** They need no password. What protects the timer from strangers is the opening by the conductor, plus, if set, the ensemble code: a light barrier, not a password, since it travels in the address and can be found by trying.
 - **Pages.** No inline scripts: a Content-Security-Policy allows only the scripts of this folder, and the conductor's page refuses to run inside another site's frame. Whatever the displays receive is checked by the server first (colours, lengths).
 - **Requests.** Bodies over 4 KB are refused; PHP warnings are never shown.
-- **HTTPS.** On plain `http://` the password and the token travel unprotected: the login page warns about it. Use `https://`.
+- **HTTPS.** Required. `.htaccess` sends every `http://` request to `https://`, and `api.php` refuses anything that does not arrive over HTTPS, so password and session never travel unprotected, on nginx too. HTTPS that ends at the hosting's proxy is recognised through `X-Forwarded-Proto`. `FORCE_HTTPS` in `config.php` turns it off for a site with no HTTPS at all. Testing on the same computer (`localhost`) is exempt.
 - **nginx.** `.htaccess` files are ignored. Add to the site configuration, with your folder name: `location ~ ^/elan/(data/|config\.php$|README\.md$) { deny all; }`.
 
 ## Files

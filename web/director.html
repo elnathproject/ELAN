@@ -137,7 +137,7 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
 <div class="dialog" id="login" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
   <form class="card" id="loginForm" autocomplete="off">
     <h2 id="loginTitle">Élan</h2>
-    <p>Conductor's page. The performers open the address shown in Settings.</p>
+    <p>Conductor's page. Logging in opens the timer for the performers, at the address shown in Settings.</p>
     <input type="password" id="pw" placeholder="Password" autocomplete="current-password">
     <label class="check"><input type="checkbox" id="remember"> Remember on this computer</label>
     <p class="err" id="httpWarn"></p>
@@ -152,6 +152,7 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
     <h3>Address for the performers</h3>
     <div class="addr" id="addr"></div>
     <div class="row"><span class="small" id="addrNote"></span><button class="btn" id="copy">Copy</button></div>
+    <p class="small" id="openNote"></p>
     <h3>Countdown colour <span id="hexCount"></span></h3>
     <div class="swatches" id="swCount" role="radiogroup" aria-label="Countdown colour"></div>
     <h3>Stopwatch colour <span id="hexRun"></span></h3>

@@ -14,6 +14,10 @@ require __DIR__ . '/config.php';
 defined('DIRECTOR_PASSWORD') || define('DIRECTOR_PASSWORD', '');
 defined('SYNC_DELAY_MS') || define('SYNC_DELAY_MS', 1000);
 defined('ENSEMBLE_CODE') || define('ENSEMBLE_CODE', '');
+defined('FORCE_HTTPS') || define('FORCE_HTTPS', true);
+defined('LOGIN_MAX_FAILS') || define('LOGIN_MAX_FAILS', 5);
+defined('LOGIN_MAX_FAILS_ALL') || define('LOGIN_MAX_FAILS_ALL', 30);
+defined('CLOSE_AFTER_MINUTES') || define('CLOSE_AFTER_MINUTES', 120);
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 header('X-Robots-Tag: noindex, nofollow');
@@ -22,8 +26,7 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 header('Cross-Origin-Resource-Policy: same-origin');
 
-const AUTH_MAX_FAILS = 5;   // wrong passwords before the block
-const AUTH_WINDOW = 600;    // window and length of the block, in seconds
+const AUTH_WINDOW = 600;    // window and length of the blocks for wrong passwords, in seconds
 const AUTH_MAX_IPS = 2000;  // addresses remembered for wrong passwords
 const TOKEN_HOURS = 12;     // length of a conductor's session
 const TOKEN_DAYS = 30;      // the same, with "remember on this computer"
@@ -48,7 +51,15 @@ function is_local() {
   foreach (['HTTP_X_FORWARDED_FOR', 'HTTP_FORWARDED', 'HTTP_X_REAL_IP', 'HTTP_CF_CONNECTING_IP'] as $h) if (!empty($_SERVER[$h])) return false;
   return in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1', '::1'], true);
 }
+// HTTPS, also when it ends at the hosting's proxy (X-Forwarded-Proto, as on Tophost)
+function is_https() {
+  return (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') || (string)($_SERVER['SERVER_PORT'] ?? '') === '443'
+      || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+}
 function password_usable() { return DIRECTOR_PASSWORD !== '' && (DIRECTOR_PASSWORD !== 'changeme' || is_local()); }
+
+// --- HTTPS only: over plain HTTP nothing is answered, so no password or token is ever accepted in clear ---
+if (FORCE_HTTPS && !is_https() && !is_local()) { http_response_code(403); exit('{"error":"https"}'); }
 
 // --- request: a small JSON object, nothing else ---
 $rawIn = (string) file_get_contents('php://input', false, null, 0, MAX_BODY + 1);
@@ -70,13 +81,26 @@ function client_key() {
 function token_hash($t) { return hash_hmac('sha256', $t, 'token' . DIRECTOR_PASSWORD); }
 function auth_load() {
   $A = json_decode(@file_get_contents(AUTH_FILE) ?: '{}', true);
-  $A = ['fails' => is_array($A['fails'] ?? null) ? $A['fails'] : [], 'tokens' => is_array($A['tokens'] ?? null) ? $A['tokens'] : []];
+  $A = ['fails' => is_array($A['fails'] ?? null) ? $A['fails'] : [], 'tokens' => is_array($A['tokens'] ?? null) ? $A['tokens'] : [],
+        'all' => is_array($A['all'] ?? null) ? $A['all'] : []];
   $now = time();
+  // wrong passwords from every address together, in the current window
+  $A['all'] = ['n' => (int)($A['all']['n'] ?? 0), 't' => (int)($A['all']['t'] ?? 0)];
+  if ($now - $A['all']['t'] > AUTH_WINDOW) $A['all'] = ['n' => 0, 't' => $now];
   foreach ($A['fails'] as $k => $v) if (!is_array($v) || $now - (int)($v['t'] ?? 0) > AUTH_WINDOW) unset($A['fails'][$k]);
   foreach ($A['tokens'] as $k => $exp) if ((int)$exp < $now) unset($A['tokens'][$k]);
   return $A;
 }
 function auth_save($A) { @file_put_contents(AUTH_FILE, json_encode($A), LOCK_EX); }
+// minutes of block for this request, or 0: too many wrong passwords from this address, or from all addresses together
+function login_blocked($A) {
+  $now = time(); $f = $A['fails'][client_key()] ?? null;
+  if ($f && (int)($f['n'] ?? 0) >= max(1, (int)LOGIN_MAX_FAILS)) return max(1, (int) ceil(((int)$f['t'] + AUTH_WINDOW - $now) / 60));
+  if ((int)LOGIN_MAX_FAILS_ALL > 0 && $A['all']['n'] >= (int)LOGIN_MAX_FAILS_ALL) return max(1, (int) ceil(($A['all']['t'] + AUTH_WINDOW - $now) / 60));
+  return 0;
+}
+// a blocked login is answered at once, before the timer's file is even opened: a flood of attempts stays cheap
+if ($a === 'login' && ($min = login_blocked(auth_load()))) { http_response_code(429); exit(json_encode(['type' => 'blocked', 'minutes' => $min])); }
 
 // --- state, with exclusive lock: one request at a time changes it ---
 $file = __DIR__ . '/data/state.json';
@@ -97,6 +121,7 @@ $DEFAULTS = [
   'run' => '#9fe3d6',   // stopwatch colour
   'vibrate' => false,   // vibration at zero on the displays
   'displays' => [],     // anonymous id => last poll (unix seconds)
+  'conductors' => [],   // session id => last contact (unix seconds): the timer is open while one is recent
 ];
 $S += $DEFAULTS;
 // the file is trusted only as far as its types: whatever it holds, the pages receive clean values
@@ -108,6 +133,16 @@ $S['until'] = $S['since'] !== null && is_numeric($S['until']) ? (int)$S['until']
 foreach (['count', 'run'] as $k) $S[$k] = color_or_null($S[$k]) ?? $DEFAULTS[$k];
 $S['vibrate'] = (bool)$S['vibrate'];
 if (!is_array($S['displays'])) $S['displays'] = [];
+if (!is_array($S['conductors'])) $S['conductors'] = [];
+$closeAfter = max(1, (int)CLOSE_AFTER_MINUTES) * 60;
+foreach ($S['conductors'] as $k => $seen) if (time() - (int)$seen > $closeAfter) { unset($S['conductors'][$k]); $dirty = true; }
+// The performers see the timer only while it is open: from the conductor's login until Log out,
+// or until CLOSE_AFTER_MINUTES after the conductor's page was last connected.
+$open = count($S['conductors']) > 0;
+function conductor_seen(&$S, $token, &$dirty) {
+  $cid = substr(token_hash($token), 0, 16); $t = time();
+  if (($S['conductors'][$cid] ?? 0) !== $t) { $S['conductors'][$cid] = $t; $dirty = true; } // written at most once a second
+}
 $delay = max(0, min(5000, (int)SYNC_DELAY_MS));
 
 // what every page needs to draw the timer
@@ -138,15 +173,14 @@ function warnings() {
 }
 function state_for_director($S) {
   return ['type' => 'state', 'online' => online($S), 'codeRequired' => ENSEMBLE_CODE !== '', 'code' => ENSEMBLE_CODE,
-          'warnings' => warnings()] + timer($S);
+          'closeAfter' => max(1, (int)CLOSE_AFTER_MINUTES), 'warnings' => warnings()] + timer($S);
 }
 
 switch ($a) {
   // ================= displays =================
-  case 'info':
-    out(['codeRequired' => ENSEMBLE_CODE !== '']);
-    break;
   case 'poll': {
+    // closed: nothing is told and nothing is written, whatever the code
+    if (!$open) { out(['closed' => true, 'now' => now_ms()]); break; }
     if (ENSEMBLE_CODE !== '' && !hash_equals(ENSEMBLE_CODE, trim(str($_GET['code'] ?? '')))) {
       http_response_code(403); out(['error' => 'code']); break;
     }
@@ -170,11 +204,12 @@ switch ($a) {
   // ================= conductor =================
   case 'login': { // password → session token; the password is never stored in the browser
     $A = auth_load(); $ip = client_key();
-    if (($A['fails'][$ip]['n'] ?? 0) >= AUTH_MAX_FAILS) { http_response_code(429); out(['type' => 'blocked', 'minutes' => AUTH_WINDOW / 60]); break; }
+    if ($min = login_blocked($A)) { http_response_code(429); out(['type' => 'blocked', 'minutes' => $min]); break; }
     if (DIRECTOR_PASSWORD === '') { http_response_code(403); out(['type' => 'no-password']); break; }
     // the password travels only in the request body, never in the address
     if (!hash_equals(hash('sha256', DIRECTOR_PASSWORD), hash('sha256', str($in['key'] ?? '', 500)))) {
       $A['fails'][$ip] = ['n' => ($A['fails'][$ip]['n'] ?? 0) + 1, 't' => time()];
+      $A['all']['n']++;
       if (count($A['fails']) > AUTH_MAX_IPS) $A['fails'] = array_slice($A['fails'], -AUTH_MAX_IPS, null, true);
       auth_save($A);
       http_response_code(403); out(['type' => 'denied']); break;
@@ -185,19 +220,27 @@ switch ($a) {
     $A['tokens'][token_hash($token)] = time() + (!empty($in['remember']) ? TOKEN_DAYS * 86400 : TOKEN_HOURS * 3600);
     if (count($A['tokens']) > MAX_TOKENS) { asort($A['tokens']); $A['tokens'] = array_slice($A['tokens'], -MAX_TOKENS, null, true); }
     auth_save($A);
+    conductor_seen($S, $token, $dirty); // the login opens the timer for the performers
     out(['token' => $token] + state_for_director($S));
     break;
   }
   default: { // every other action needs an open session
     $A = auth_load(); $token = str($in['token'] ?? '', 128);
     if ($token === '' || !isset($A['tokens'][token_hash($token)]) || !password_usable()) { http_response_code(403); out(['type' => 'denied']); break; }
+    if ($a !== 'logout') conductor_seen($S, $token, $dirty);
     $at = now_ms() + $delay; // instant at which a command takes effect, the same for every display
     $running = $S['since'] !== null && $S['until'] === null;
     switch ($a) {
       case 'state': break;
-      case 'logout':
+      case 'logout': { // closes the timer too, unless another conductor is at work right now
         unset($A['tokens'][token_hash($token)]); auth_save($A);
+        unset($S['conductors'][substr(token_hash($token), 0, 16)]);
+        $others = false;
+        foreach ($S['conductors'] as $seen) if (time() - (int)$seen <= 5) $others = true;
+        if (!$others) $S['conductors'] = [];
+        $dirty = true; $token = '';
         break;
+      }
       case 'start': // from the setup only; sets the length too
         if ($S['since'] === null && $S['acc'] === 0) {
           $S['target'] = seconds_in($in['seconds'] ?? 0) * 1000;

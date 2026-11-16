@@ -30,6 +30,11 @@
     const r = await fetch('api.php?a=' + a, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
                                               body: JSON.stringify(bodyObj) });
     const j = await r.json();
+    if (j.error === 'https') { // the server answers only over HTTPS
+      if (location.protocol === 'http:') location.replace('https:' + location.href.slice(5));
+      else $('httpWarn').textContent = 'The server does not recognise this connection as HTTPS: see FORCE_HTTPS in config.php.';
+      throw new Error('https');
+    }
     if (j.type === 'state') { Elan.sample(t0, j.now, Date.now()); S = j; update(); }
     return j;
   }
@@ -60,7 +65,7 @@
       token = j.token; ss.set('elan.token', token, remember);
       $('login').hidden = true; $('pw').value = ''; $('loginMsg').textContent = '';
       if (S.since === null && S.acc === 0) setInputs(S.target);
-    } catch (err) { $('loginMsg').textContent = 'The server does not answer.'; }
+    } catch (err) { if (err.message !== 'https') $('loginMsg').textContent = 'The server does not answer.'; }
   });
   $('logout').addEventListener('click', async () => {
     try { if (token) await call('logout', { token }); } catch (e) {}
@@ -173,14 +178,16 @@
     $('online').textContent = S.online === 1 ? '1 display' : `${S.online} displays`;
     $('warnings').textContent = '';
     S.warnings.forEach(w => { const d = document.createElement('div'); d.className = 'warn'; d.textContent = w; $('warnings').appendChild(d); });
-    const s = JSON.stringify([S.count, S.run, S.vibrate, S.code, S.codeRequired]);
+    const s = JSON.stringify([S.count, S.run, S.vibrate, S.code, S.codeRequired, S.closeAfter]);
     if (s !== sig) { // redrawn only when something changes, not at every poll
       sig = s;
       swatches('swCount', 'count'); swatches('swRun', 'run');
       $('hexCount').textContent = S.count.toUpperCase(); $('hexRun').textContent = S.run.toUpperCase();
       $('vibrate').checked = S.vibrate;
       $('addr').textContent = displayAddress();
-      $('addrNote').textContent = S.codeRequired ? 'Includes the ensemble code.' : 'Anyone with this address can watch the timer.';
+      $('addrNote').textContent = S.codeRequired ? 'Includes the ensemble code.' : 'Anyone with this address can watch the timer while it is open.';
+      const h = S.closeAfter >= 120 && S.closeAfter % 60 === 0 ? `${S.closeAfter / 60} hours` : `${S.closeAfter} minutes`;
+      $('openNote').textContent = `The performers see the timer only while you are logged in: Log out closes it. If this page loses the connection, the timer stays visible for ${h}.`;
     }
   }
   const LABEL = { setup: 'Set the countdown', count: 'Countdown', run: 'Elapsed time' };

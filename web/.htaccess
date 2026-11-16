@@ -1,5 +1,14 @@
 # Élan for ensembles: protections for the whole folder (Apache)
 
+# HTTPS only: every http:// request is sent to https:// (also when HTTPS ends at the hosting's proxy)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:[0-9]+)?$
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+</IfModule>
+
 <IfModule mod_headers.c>
   # ask search engines not to index or archive anything
   Header set X-Robots-Tag "noindex, nofollow, noarchive"
