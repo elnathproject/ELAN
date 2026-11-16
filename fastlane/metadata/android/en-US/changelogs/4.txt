@@ -1,0 +1,1 @@
+A Bluetooth page-turner pedal now controls the timer: forward is Start, Pause and Resume, back is Reset. Connecting the pedal no longer restarts the app.

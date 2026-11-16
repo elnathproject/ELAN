@@ -24,6 +24,7 @@ In landscape: the countdown in amber, then the stopwatch in aqua once zero has p
 
 - **Countdown, then stopwatch.** Set the duration in minutes and seconds, or pick a preset (0:10, 0:30, 1:00, 3:00, 5:00, 10:00). At zero the app switches to the stopwatch without any input, with a colour change and a flash.
 - **Full-screen digits.** In portrait, minutes sit above seconds; in landscape they share a single row. Either way they take the full available height.
+- **Foot pedal.** A Bluetooth page-turner pedal, like those used for PDF scores, works as the two buttons: forward is Start, Pause and Resume, back is Reset. Arrow keys, Page Up/Down, Space and Enter are all recognised, so any pedal mode works, as does a Bluetooth keyboard.
 - **Silent by default.** Sound starts off every time the app opens. Turn it on with the Sound button at the top to get a double tone and a vibration at zero.
 - **Screen stays on** for as long as the app is open.
 - **Works offline.** The app does not request internet access and collects no data.

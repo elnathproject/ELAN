@@ -227,7 +227,7 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
 <div class="credits" id="credits" hidden role="dialog" aria-modal="true" aria-labelledby="crTitle">
   <div class="card">
     <h2 id="crTitle">Élan</h2>
-    <div class="ver">Version 1.0.2</div>
+    <div class="ver">Version 1.0.3</div>
     <p>A countdown that starts the stopwatch on its own the moment it reaches zero.</p>
     <p>Designed and built by Alessandro Ciccarelli.<br><a href="https://alessandrociccarelli.com" target="_blank" rel="noopener">alessandrociccarelli.com</a></p>
     <p class="small">© 2026. Free software under the GPL 3. Works offline and collects no data.</p>
@@ -450,6 +450,24 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
     else pause();
   });
   $('reset').addEventListener('click', reset);
+
+  // Bluetooth page-turner pedals act as keyboards. Depending on the model they send
+  // arrows, Page Up/Down or Space/Enter: "forward" works as the main button
+  // (Start, Pause, Resume), "back" as Reset. Ignored while a panel is open.
+  const PEDAL_MAIN = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
+  const PEDAL_RESET = ['ArrowLeft', 'ArrowUp', 'PageUp'];
+  document.addEventListener('keydown', e => {
+    if (!$('prefsPanel').hidden || !$('credits').hidden) return;
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+    const toMain = PEDAL_MAIN.includes(e.key), toReset = PEDAL_RESET.includes(e.key);
+    if (!toMain && !toReset) return;
+    e.preventDefault();          // no scrolling, and no second click on a focused button
+    if (e.repeat) return;        // a pedal held down counts once
+    if (document.activeElement && document.activeElement !== body) document.activeElement.blur();
+    (toMain ? mainB : $('reset')).click();
+  }, true);
+  // Space on a focused button would click it on release: the pedal has already acted.
+  document.addEventListener('keyup', e => { if (e.key === ' ' && $('prefsPanel').hidden && $('credits').hidden) e.preventDefault(); }, true);
   $('stage').addEventListener('click', () => {
     if (phase === 'setup' || pausedAt !== null) return;
     if (body.classList.contains('immersive')) revealControls(); else immerse();

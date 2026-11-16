@@ -12,12 +12,13 @@
         android:theme="@style/Theme.Countdown">
 
         <!-- screenOrientation="sensor": rotates with the phone.
-             configChanges: rotating does not reload the page, so the timer keeps running. -->
+             configChanges: rotating, or connecting a Bluetooth keyboard or pedal,
+             does not reload the page, so the timer keeps running. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:screenOrientation="sensor"
-            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode"
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

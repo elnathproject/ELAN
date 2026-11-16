@@ -74,6 +74,7 @@ class MainActivity : AppCompatActivity() {
             settings.setSupportMultipleWindows(false)
         }
         setContentView(web)
+        web.requestFocus()  // keys from a Bluetooth pedal reach the page
         hideSystemBars()
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState)
