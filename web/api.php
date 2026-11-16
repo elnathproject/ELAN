@@ -166,7 +166,7 @@ function warnings() {
   if (!is_writable("$base/data")) $w[] = 'The data folder is not writable: the server cannot save the timer. Try permissions 755, or 775.';
   if (strlen(DIRECTOR_PASSWORD) < 8) $w[] = 'The conductor\'s password is shorter than 8 characters: choose a longer one in config.php.';
   $loose = [];
-  foreach (['.', 'data', 'api.php', 'config.php', 'index.html', 'director.html', 'timer.js', 'display.js', 'director.js', '.htaccess', 'data/.htaccess'] as $f) {
+  foreach (['.', 'data', 'api.php', 'config.php', 'index.html', 'director.html', 'timer.js', 'qrcode.js', 'display.js', 'director.js', '.htaccess', 'data/.htaccess'] as $f) {
     $p = @fileperms("$base/$f");
     if ($p !== false && ($p & 0002)) $loose[] = $f === '.' ? 'the main folder' : $f;
   }

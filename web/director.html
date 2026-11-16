@@ -76,6 +76,10 @@ button:focus-visible, input:focus-visible { outline:2px solid var(--fg); outline
 .card .btn.primary { background:var(--count); color:var(--count-ink); border:none; }
 .card .err { color:#e66; }
 .card #loginMsg { min-height:1em; }
+.qrcard { background:#fff; color:#111; border-radius:14px; padding:18px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; max-width:96vw; }
+.qrcard canvas { display:block; }
+.qraddr { font:15px var(--font-digits); word-break:break-all; text-align:center; -webkit-user-select:text; user-select:text; }
+.qrhint { font-size:12px; color:#666; text-align:center; }
 .swatches { display:grid; grid-template-columns:repeat(9, 1fr); gap:8px; }
 .sw { aspect-ratio:1; width:100%; border-radius:50%; border:2px solid transparent; padding:0; box-shadow:inset 0 0 0 1px rgba(0,0,0,.25); }
 .sw[aria-checked="true"] { border-color:var(--fg); box-shadow:inset 0 0 0 3px var(--panel); }
@@ -94,6 +98,7 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
   <div class="phase"><i></i><span id="label">Set the countdown</span></div>
   <div class="tools">
     <span class="online" id="online"></span>
+    <button class="iconbtn" id="qrBtn" title="Show the performers' address as a QR code to scan">QR code</button>
     <button class="iconbtn" id="prefsBtn">Settings</button>
     <button class="iconbtn" id="logout">Log out</button>
   </div>
@@ -163,7 +168,16 @@ label.check input { width:20px; height:20px; accent-color:var(--count); }
   </div>
 </div>
 
+<div class="dialog" id="qr" hidden role="dialog" aria-modal="true" aria-label="QR code of the address for the performers">
+  <div class="qrcard">
+    <canvas id="qrCanvas"></canvas>
+    <div class="qraddr" id="qrAddr"></div>
+    <div class="qrhint">Scan with the phone's camera to open the timer · click or Esc to close</div>
+  </div>
+</div>
+
 <script src="timer.js"></script>
+<script src="qrcode.js"></script>
 <script src="director.js"></script>
 </body>
 </html>

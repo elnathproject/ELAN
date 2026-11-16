@@ -25,7 +25,7 @@ Web hosting with PHP 7.4 or later, shared hosting included. No database: the sta
 
 - **Opening and closing:** the performers see the timer only while it is open. Logging in as conductor opens it; *Log out* closes it, and the displays go back to a waiting page that opens again by itself. If the conductor's page loses the connection (computer asleep, network down) the timer stays visible for two hours, then closes (`CLOSE_AFTER_MINUTES` in `config.php`). While closed, the server tells visitors nothing.
 - **Conductor:** open `director.html` (for example `https://yoursite.com/elan/director.html`) and enter the password. *Remember on this computer* keeps you logged in for 30 days; otherwise the session ends when the tab is closed, or after 12 hours. *Log out* ends it at once. Several devices can control the same timer.
-- **Performers:** open the folder address (`https://yoursite.com/elan/`), shown under *Settings* on the conductor's page with a *Copy* button. One tap shows the timer full screen and keeps the screen on.
+- **Performers:** open the folder address (`https://yoursite.com/elan/`). On the conductor's page, *QR code* shows it as a large QR code to scan from the conductor's screen (with the ensemble code, if set); *Settings* shows it as text with a *Copy* button. One tap shows the timer full screen and keeps the screen on.
 - **Ensemble code:** if `ENSEMBLE_CODE` is set, the address for the performers carries it (`…/elan/?code=4719`) and the displays show nothing without it. Without a code, anyone who knows the address can watch the timer, but only the conductor can control it.
 - **Pedal or keyboard (conductor):** right or down arrow, Page Down, Space or Enter act as the main button (Start, Pause, Resume); left or up arrow, Page Up act as Reset.
 - The top bar of the conductor's page shows how many displays are connected.
@@ -50,6 +50,7 @@ Web hosting with PHP 7.4 or later, shared hosting included. No database: the sta
 | `director.html`, `director.js` | conductor's page |
 | `index.html`, `display.js` | performers' display |
 | `timer.js` | code shared by the two pages: seven-segment digits, clock offset, time computation |
+| `qrcode.js` | QR code generator by Kazuhiko Arase (qrcode-generator 2.0.4, MIT licence), used unchanged by the conductor's page |
 | `.htaccess`, `data/.htaccess`, `data/index.html` | protections: no indexing, security headers, `config.php` and `data/` not readable from the web |
 
 ## Development

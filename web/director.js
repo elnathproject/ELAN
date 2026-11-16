@@ -126,6 +126,7 @@
   const PEDAL_MAIN = ['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'];
   const PEDAL_RESET = ['ArrowLeft', 'ArrowUp', 'PageUp'];
   document.addEventListener('keydown', e => {
+    if (!$('qr').hidden) { if (e.key === 'Escape') $('qr').hidden = true; return; } // QR on screen: the pedal does nothing
     if (!$('login').hidden || !$('prefs').hidden) return;
     if (e.ctrlKey || e.altKey || e.metaKey) return;
     const toMain = PEDAL_MAIN.includes(e.key), toReset = PEDAL_RESET.includes(e.key);
@@ -135,7 +136,7 @@
     if (document.activeElement && document.activeElement !== body) document.activeElement.blur();
     toMain ? mainAction() : send('reset');
   }, true);
-  document.addEventListener('keyup', e => { if (e.key === ' ' && $('login').hidden && $('prefs').hidden) e.preventDefault(); }, true);
+  document.addEventListener('keyup', e => { if (e.key === ' ' && $('login').hidden && $('prefs').hidden && $('qr').hidden) e.preventDefault(); }, true);
 
   // ---- settings: colours, vibration, address ----
   function swatches(boxId, k) {
@@ -153,6 +154,23 @@
     if (S && S.codeRequired) u.searchParams.set('code', S.code);
     return u.href;
   }
+  // QR code of the address for the performers, as large as the window allows: black on white, with the
+  // quiet zone scanners need. Drawn here with qrcode.js (Kazuhiko Arase, MIT licence): nothing leaves the page.
+  function showQr() {
+    const text = displayAddress(), q = qrcode(0, 'M');
+    q.addData(text); q.make();
+    const n = q.getModuleCount(), quiet = 4, dpr = window.devicePixelRatio || 1;
+    const side = Math.max(160, Math.min(window.innerWidth - 80, window.innerHeight - 190));
+    const cell = Math.max(1, Math.floor(side * dpr / (n + 2 * quiet))), px = cell * (n + 2 * quiet);
+    const cv = $('qrCanvas'); cv.width = cv.height = px; cv.style.width = cv.style.height = (px / dpr) + 'px';
+    const g = cv.getContext('2d');
+    g.fillStyle = '#fff'; g.fillRect(0, 0, px, px); g.fillStyle = '#000';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) g.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+    $('qrAddr').textContent = text;
+    $('qr').hidden = false;
+  }
+  $('qrBtn').addEventListener('click', e => { e.currentTarget.blur(); if (S) showQr(); });
+  $('qr').addEventListener('click', () => { $('qr').hidden = true; });
   $('prefsBtn').addEventListener('click', () => { $('prefs').hidden = false; update(); $('prefsClose').focus(); });
   $('prefsClose').addEventListener('click', () => { $('prefs').hidden = true; });
   $('prefs').addEventListener('click', e => { if (e.target.id === 'prefs') $('prefs').hidden = true; });
