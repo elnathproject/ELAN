@@ -1,1 +1,1 @@
-Countdown that starts a stopwatch at zero. Big LED digits, offline.
+Countdown then stopwatch, big LED digits, Bluetooth page-turner pedal control

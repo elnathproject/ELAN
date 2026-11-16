@@ -1,19 +1,20 @@
-Élan measures time in two consecutive phases. Set a countdown; when it reaches zero, a stopwatch starts by itself.
+Élan measures time in two consecutive phases: a countdown, then a stopwatch that starts by itself when the countdown reaches zero. It can be run entirely with a Bluetooth page-turner pedal, the kind musicians use to turn the pages of a PDF score, so the hands stay free for an instrument.
+
+<b>Bluetooth pedal</b>
+Pair the pedal in the Bluetooth settings of Android as a keyboard, then open Élan. Forward is Start, Pause and Resume; back is Reset. The pedal presses the same two buttons that appear on the screen. Arrow keys, Page Up and Page Down, Space and Enter are all recognised, so any pedal mode works, as does an ordinary Bluetooth keyboard. If the pedal disconnects and reconnects while the timer is running, the count is not affected: time is computed from the system clock, and the app does not restart.
 
 The digits are drawn as seven-segment LED figures and fill the whole screen, in portrait and in landscape.
 
 <b>Features</b>
 <ul>
+<li>Bluetooth page-turner pedal: forward is Start, Pause and Resume, back is Reset</li>
 <li>Countdown followed automatically by a stopwatch</li>
 <li>Duration in minutes and seconds, or quick presets (0:10, 0:30, 1:00, 3:00, 5:00, 10:00)</li>
 <li>Silent by default; with Sound on, a double tone and a vibration when the countdown ends</li>
-<li>Bluetooth page-turner pedal: forward is Start, Pause and Resume, back is Reset</li>
 <li>Screen stays on while the app is open</li>
 <li>Digits at full height, minutes above seconds in portrait, one row in landscape</li>
 <li>Separate colours for the countdown and the stopwatch, remembered between sessions</li>
 <li>Works fully offline: no internet permission, no ads, no tracking</li>
 </ul>
-
-Time is computed from the system clock, not by counting ticks, so it stays accurate even if the phone slows the app down.
 
 Free software, released under the GNU General Public License, version 3.
