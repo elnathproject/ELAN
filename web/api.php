@@ -70,12 +70,16 @@ $a = str($_GET['a'] ?? ($in['a'] ?? ''), 20);
 
 // --- conductor's access: wrong passwords per address, and open sessions ---
 // Addresses and session tokens are stored only as keyed hashes: reading the file reveals neither.
-function client_key() {
-  $ip = $_SERVER['REMOTE_ADDR'] ?? '?';
-  $bin = @inet_pton($ip);
+function ip_norm($ip) {
+  $bin = @inet_pton(trim($ip));
   // IPv6: a visitor owns a whole /64 and could change address at every attempt
-  if ($bin !== false && strlen($bin) === 16 && substr($bin, 0, 12) !== "\0\0\0\0\0\0\0\0\0\0\xff\xff") $ip = bin2hex(substr($bin, 0, 8));
-  return hash_hmac('sha256', $ip, 'ip' . DIRECTOR_PASSWORD);
+  if ($bin !== false && strlen($bin) === 16 && substr($bin, 0, 12) !== "\0\0\0\0\0\0\0\0\0\0\xff\xff") return bin2hex(substr($bin, 0, 8));
+  return substr(trim($ip), 0, 60);
+}
+function client_key() {
+  // behind the hosting's proxy everybody arrives from the same address: the last address added by the proxy tells them apart
+  $fwd = explode(',', (string)($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+  return hash_hmac('sha256', ip_norm($_SERVER['REMOTE_ADDR'] ?? '?') . '|' . ip_norm((string)end($fwd)), 'ip' . DIRECTOR_PASSWORD);
 }
 // changing the password in config.php closes every open session
 function token_hash($t) { return hash_hmac('sha256', $t, 'token' . DIRECTOR_PASSWORD); }
