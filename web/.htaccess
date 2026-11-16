@@ -1,0 +1,18 @@
+# Élan for ensembles: protections for the whole folder (Apache)
+
+# ask search engines not to index or archive anything
+<IfModule mod_headers.c>
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "no-referrer"
+</IfModule>
+
+# instructions and configuration are not readable from the web
+<FilesMatch "^(README\.md|config\.php)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Deny from all
+  </IfModule>
+</FilesMatch>

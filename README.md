@@ -46,12 +46,17 @@ To install it on your phone:
 
 To update, download the new APK and install it over the old one. If Android refuses because the signature differs, uninstall the old version first; the colour settings are stored inside the app and are lost in that case.
 
+## For ensembles: web version
+
+The `web/` folder holds a web version for a group of musicians: a conductor controls one timer from a password-protected page, and the performers follow it full screen on their phones or tablets by opening an address, with no app to install. All displays reach zero together. It runs on ordinary PHP web hosting; see [web/README.md](web/README.md).
+
 ## Project structure
 
 - `app/src/main/assets/index.html`: the timer itself, meaning the interface, the digit drawing and the timing logic. It also runs in a desktop or mobile browser for quick testing.
 - `app/src/main/java/com/ciccarelli/countdown/MainActivity.kt`: the Android window that hosts the timer full screen, keeps the screen on, handles vibration and opens external links in the browser.
 - `app/src/main/AndroidManifest.xml`: name, icon, automatic rotation and permissions (vibration only).
 - `.github/workflows/build.yml`: the automatic build on GitHub.
+- `web/`: the web version for ensembles (conductor and displays), described in its own README.
 - `fastlane/metadata/android/en-US/`: the store listing (title, descriptions, icon, screenshots) used by F-Droid.
 - `LICENSE`: the full text of the GNU General Public License, version 3.
 
