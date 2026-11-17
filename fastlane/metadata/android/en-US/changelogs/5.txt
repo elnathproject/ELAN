@@ -1,0 +1,1 @@
+The About panel now mentions the Bluetooth pedal, and scrolls on small landscape screens.
