@@ -127,19 +127,21 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
 .cardrow button { margin-top: 0; align-self: auto; }
 #prReset { color: var(--muted); }
 .credits {
-  position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 20; display: flex; overflow-y: auto;
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   padding: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 .card {
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   padding: 26px 26px 22px; max-width: 340px; width: 100%;
+  margin: auto;
   display: flex; flex-direction: column; gap: 14px; text-align: left;
 }
 .card h2 { margin: 0; font: italic 400 40px Georgia, "Times New Roman", serif; color: var(--count); letter-spacing: .01em; }
 .card .ver { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: -8px; }
 .card p { margin: 0; font-size: 15px; line-height: 1.5; color: var(--fg); }
 .card a { color: var(--run); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--run) 40%, transparent); }
+.card strong { color: var(--count); font-weight: 600; }
 .card .small { font-size: 13px; color: var(--muted); }
 .card button {
   margin-top: 6px; align-self: flex-end; background: none; border: 1px solid var(--line); color: var(--fg);
@@ -229,6 +231,7 @@ body[data-phase="count"] #prefs, body[data-phase="run"] #prefs { display: none; 
     <h2 id="crTitle">Élan</h2>
     <div class="ver">Version 1.0.3</div>
     <p>A countdown that starts the stopwatch on its own the moment it reaches zero.</p>
+    <p><strong>Bluetooth pedal.</strong> Pair a page-turner pedal as a keyboard: forward is Start, Pause and Resume, back is Reset.</p>
     <p>Designed and built by Alessandro Ciccarelli.<br><a href="https://alessandrociccarelli.com" target="_blank" rel="noopener">alessandrociccarelli.com</a></p>
     <p class="small">© 2026. Free software under the GPL 3. Works offline and collects no data.</p>
     <button id="crClose">Close</button>
